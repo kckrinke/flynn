@@ -288,6 +288,7 @@ func runDaemon(args *docopt.Args) {
 	shutdown.BeforeExit(func() { vman.CloseDB() })
 
 	mux := logmux.New(hostID, logDir, logger.New("host.id", hostID, "component", "logmux"))
+	sinkManager := logmux.NewSinkManager(mux, logger.New("host.id", hostID, "component", "sinkManager"))
 
 	log.Info("initializing job backend", "type", backendName)
 	var backend Backend
@@ -306,7 +307,7 @@ func runDaemon(args *docopt.Args) {
 	backend.SetDefaultEnv("LISTEN_IP", listenIP)
 
 	var buffers host.LogBuffers
-	discoverdManager := NewDiscoverdManager(backend, mux, hostID, publishAddr, tags)
+	discoverdManager := NewDiscoverdManager(backend, sinkManager, hostID, publishAddr, tags)
 	publishURL := "http://" + publishAddr
 	host := &Host{
 		id:  hostID,
