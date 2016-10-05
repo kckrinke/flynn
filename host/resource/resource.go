@@ -33,6 +33,10 @@ const (
 	// practice, a 1000 milliCPU limit is equivalent to 1024 CPU shares.
 	TypeCPU Type = "cpu"
 
+	// TypeDisk specifies the available disk space in bytes inside the
+	// container.
+	TypeDisk = "disk"
+
 	// TypeMaxFD specifies a value one greater than the maximum file
 	// descriptor number that can be opened inside a container.
 	TypeMaxFD Type = "max_fd"
@@ -45,10 +49,15 @@ const (
 var defaults = Resources{
 	TypeMemory: {Request: typeconv.Int64Ptr(1 * units.GiB), Limit: typeconv.Int64Ptr(1 * units.GiB)},
 	TypeCPU:    {Limit: typeconv.Int64Ptr(1000)}, // results in Linux default of 1024 shares
+	TypeDisk:   {Request: typeconv.Int64Ptr(100 * units.MiB), Limit: typeconv.Int64Ptr(100 * units.MiB)},
 	TypeMaxFD:  {Request: typeconv.Int64Ptr(10000), Limit: typeconv.Int64Ptr(10000)},
 }
 
 type Resources map[Type]Spec
+
+func (r Resources) SetLimit(typ Type, size int64) {
+	r[typ] = Spec{Request: typeconv.Int64Ptr(size), Limit: typeconv.Int64Ptr(size)}
+}
 
 func Defaults() Resources {
 	r := make(Resources)
@@ -83,7 +92,7 @@ func ToType(s string) (Type, bool) {
 
 func ParseLimit(typ Type, s string) (int64, error) {
 	switch typ {
-	case TypeMemory:
+	case TypeMemory, TypeDisk:
 		return units.RAMInBytes(s)
 	default:
 		return units.FromHumanSize(s)
@@ -92,7 +101,7 @@ func ParseLimit(typ Type, s string) (int64, error) {
 
 func FormatLimit(typ Type, limit int64) string {
 	switch typ {
-	case TypeMemory:
+	case TypeMemory, TypeDisk:
 		return byteSize(limit)
 	default:
 		return strconv.FormatInt(limit, 10)
